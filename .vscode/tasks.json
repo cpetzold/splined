@@ -1,0 +1,19 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "splined: dev",
+      "type": "cargo",
+      "command": "dev",
+      "problemMatcher": [
+        "$rustc"
+      ],
+      "env": {
+        "RUST_BACKTRACE": "full"
+      },
+      "group": {
+        "kind": "build"
+      }
+    },
+  ]
+}

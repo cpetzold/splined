@@ -1,0 +1,17 @@
+[package]
+name = "splined"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+bevy = { version = "0.13", features = ["file_watcher"] }
+bevy_dylib = "0.13"
+bevy_editor_pls = "0.8"
+bevy_rapier2d = "0.25"
+bevy_vello = "0.3"
+leafwing-input-manager = "0.13"
+
+[profile.dev.package."*"]
+opt-level = 3
