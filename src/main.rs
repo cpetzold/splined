@@ -1,10 +1,11 @@
-// mod draw;
 mod spline;
 
 use bevy::{math::vec2, prelude::*};
-// use draw::{Draw, DrawPlugin};
+use bevy_editor_pls::{default_windows::cameras::EditorCamera, prelude::*};
 use bevy_vello::VelloPlugin;
-use spline::{BezierHandle, TerrainSpline};
+use spline::{
+    Spline, SplineBundle, SplineControlPointBundle, SplineHandle, SplineHandleBundle, SplinePlugin,
+};
 
 fn main() {
     App::new()
@@ -17,50 +18,72 @@ fn main() {
             }),
             ..default()
         }))
+        .add_plugins(EditorPlugin::default())
         .add_plugins(VelloPlugin)
+        .add_plugins(SplinePlugin)
         .add_systems(Startup, setup)
         .add_systems(Update, update_terrain)
         .run();
 }
 
 fn setup(mut commands: Commands) {
-    commands.spawn(TerrainSpline::new(vec![
-        BezierHandle::from_join_and_tangent(vec2(-100., -100.), vec2(100., -100.)),
-        BezierHandle::from_join_and_tangent(vec2(100., -100.), vec2(0., 100.)),
-        BezierHandle::from_join_and_tangent(vec2(0., 100.), vec2(-100., -100.)),
-    ]));
-
     commands.spawn(Camera2dBundle::default());
+
+    let c1a = commands
+        .spawn(SplineControlPointBundle::new(vec2(-300., 300.)))
+        .id();
+    let c1b = commands
+        .spawn(SplineControlPointBundle::new(vec2(300., -300.)))
+        .id();
+    let handle1 = commands
+        .spawn(SplineHandleBundle::new(SplineHandle {
+            control_point_a: c1a,
+            control_point_b: c1b,
+        }))
+        .push_children(&[c1a, c1b])
+        .id();
+
+    let c2a = commands
+        .spawn(SplineControlPointBundle::new(vec2(-300., -300.)))
+        .id();
+    let c2b = commands
+        .spawn(SplineControlPointBundle::new(vec2(300., 300.)))
+        .id();
+    let handle2 = commands
+        .spawn(SplineHandleBundle::new(SplineHandle {
+            control_point_a: c2a,
+            control_point_b: c2b,
+        }))
+        .push_children(&[c2a, c2b])
+        .id();
+
+    commands
+        .spawn(SplineBundle {
+            spline: Spline {
+                handles: vec![handle1, handle2],
+            },
+            ..default()
+        })
+        .push_children(&[handle1, handle2]);
 }
 
-// fn render_terrain(terrain_query: Query<&TerrainSpline>, mut draw: Draw) {
-//     for spline in &terrain_query {
-//         let path = BezPath::from(spline);
-//         draw.fill_color(Fill::EvenOdd, Color::GRAY, Affine::default(), &path);
-//         draw.stroke_color(&Stroke::default(), Color::WHITE, Affine::default(), &path);
-
-//         for handle in &spline.handles {
-//             draw.circle(handle.join, 4., Color::WHITE);
-//             draw.circle(handle.c1, 4., Color::RED);
-//             draw.circle(handle.c2, 4., Color::RED);
-//         }
-//     }
-// }
-
 fn update_terrain(
-    mut terrain_query: Query<&mut TerrainSpline>,
+    mut handles: Query<&mut Transform, With<SplineHandle>>,
     window: Query<&Window>,
-    camera: Query<(&Camera, &GlobalTransform)>,
+    camera: Query<(&Camera, &GlobalTransform), Without<EditorCamera>>,
 ) {
     let window = window.single();
     let (camera, camera_transform) = camera.single();
-    for mut spline in &mut terrain_query {
-        if let Some(pos) = window
-            .cursor_position()
-            .and_then(|p| camera.viewport_to_world(camera_transform, p))
-            .map(|ray| ray.origin.truncate())
-        {
-            spline.handles[1].join = pos;
-        }
+    let Some(mut handle_transform) = handles.iter_mut().next() else {
+        return;
+    };
+
+    if let Some(pos) = window
+        .cursor_position()
+        .and_then(|p| camera.viewport_to_world(camera_transform, p))
+        .map(|ray| ray.origin.truncate())
+    {
+        handle_transform.translation.x = pos.x;
+        handle_transform.translation.y = pos.y;
     }
 }
