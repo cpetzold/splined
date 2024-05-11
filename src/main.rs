@@ -1,8 +1,10 @@
+mod editor;
 mod spline;
 
 use bevy::{math::vec2, prelude::*};
-use bevy_editor_pls::{default_windows::cameras::EditorCamera, prelude::*};
+use bevy_pancam::{PanCam, PanCamPlugin};
 use bevy_vello::VelloPlugin;
+use editor::{EditorPlugin, Selected};
 use spline::{
     Spline, SplineBundle, SplineControlPointBundle, SplineHandle, SplineHandleBundle, SplinePlugin,
 };
@@ -18,72 +20,72 @@ fn main() {
             }),
             ..default()
         }))
-        .add_plugins(EditorPlugin::default())
+        // .add_plugins(bevy_editor_pls::EditorPlugin::default())
+        .add_plugins(PanCamPlugin::default())
         .add_plugins(VelloPlugin)
-        .add_plugins(SplinePlugin)
+        .add_plugins((EditorPlugin, SplinePlugin))
         .add_systems(Startup, setup)
-        .add_systems(Update, update_terrain)
         .run();
 }
 
-fn setup(mut commands: Commands) {
-    commands.spawn(Camera2dBundle::default());
+#[derive(Component)]
+struct MainCamera;
 
+fn setup(mut commands: Commands) {
+    commands.spawn((MainCamera, Camera2dBundle::default(), PanCam::default()));
+
+    let handle1 = commands.spawn_empty().id();
     let c1a = commands
-        .spawn(SplineControlPointBundle::new(vec2(-300., 300.)))
+        .spawn((
+            SplineControlPointBundle::new(vec2(-200., 300.), handle1),
+            Selected,
+        ))
         .id();
     let c1b = commands
-        .spawn(SplineControlPointBundle::new(vec2(300., -300.)))
+        .spawn((
+            SplineControlPointBundle::new(vec2(-200., -300.), handle1),
+            Selected,
+        ))
         .id();
-    let handle1 = commands
-        .spawn(SplineHandleBundle::new(SplineHandle {
-            control_point_a: c1a,
-            control_point_b: c1b,
-        }))
-        .push_children(&[c1a, c1b])
-        .id();
+    commands.entity(handle1).insert((
+        SplineHandleBundle::new(
+            SplineHandle {
+                control_point_a: c1a,
+                control_point_b: c1b,
+            },
+            vec2(-200., 0.),
+        ),
+        Selected,
+    ));
 
+    let handle2 = commands.spawn_empty().id();
     let c2a = commands
-        .spawn(SplineControlPointBundle::new(vec2(-300., -300.)))
+        .spawn((
+            SplineControlPointBundle::new(vec2(200., -300.), handle2),
+            Selected,
+        ))
         .id();
     let c2b = commands
-        .spawn(SplineControlPointBundle::new(vec2(300., 300.)))
+        .spawn((
+            SplineControlPointBundle::new(vec2(200., 300.), handle2),
+            Selected,
+        ))
         .id();
-    let handle2 = commands
-        .spawn(SplineHandleBundle::new(SplineHandle {
-            control_point_a: c2a,
-            control_point_b: c2b,
-        }))
-        .push_children(&[c2a, c2b])
-        .id();
-
-    commands
-        .spawn(SplineBundle {
-            spline: Spline {
-                handles: vec![handle1, handle2],
+    commands.entity(handle2).insert((
+        SplineHandleBundle::new(
+            SplineHandle {
+                control_point_a: c2a,
+                control_point_b: c2b,
             },
-            ..default()
-        })
-        .push_children(&[handle1, handle2]);
-}
+            vec2(200., 0.),
+        ),
+        Selected,
+    ));
 
-fn update_terrain(
-    mut handles: Query<&mut Transform, With<SplineHandle>>,
-    window: Query<&Window>,
-    camera: Query<(&Camera, &GlobalTransform), Without<EditorCamera>>,
-) {
-    let window = window.single();
-    let (camera, camera_transform) = camera.single();
-    let Some(mut handle_transform) = handles.iter_mut().next() else {
-        return;
-    };
-
-    if let Some(pos) = window
-        .cursor_position()
-        .and_then(|p| camera.viewport_to_world(camera_transform, p))
-        .map(|ray| ray.origin.truncate())
-    {
-        handle_transform.translation.x = pos.x;
-        handle_transform.translation.y = pos.y;
-    }
+    commands.spawn((SplineBundle {
+        spline: Spline {
+            handles: vec![handle1, handle2],
+        },
+        ..default()
+    },));
 }

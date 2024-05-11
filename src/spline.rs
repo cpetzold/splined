@@ -2,38 +2,43 @@ use bevy::{math::vec2, prelude::*};
 use bevy_vello::{
     vello::{
         kurbo::{Affine, BezPath, Circle, Line, Point, Stroke},
-        peniko::{self, Fill},
+        peniko::{self, BrushRef, Fill},
     },
-    CoordinateSpace, VelloScene,
+    CoordinateSpace, VelloScene, VelloSceneBundle,
 };
+
+use crate::editor::Selected;
 
 pub struct SplinePlugin;
 
 impl Plugin for SplinePlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(
-            Update,
+            PostUpdate,
             (render_splines, render_handles, render_control_points),
         );
     }
 }
 
-#[derive(Component, Default)]
-pub struct SplineControlPoint;
+#[derive(Component)]
+pub struct SplineControlPoint {
+    pub handle: Entity,
+}
 
-#[derive(Bundle, Default)]
+#[derive(Bundle)]
 pub struct SplineControlPointBundle {
     pub control_point: SplineControlPoint,
-    pub spatial: SpatialBundle,
-    pub scene: VelloScene,
-    pub coordinate_space: CoordinateSpace,
+    pub scene_bundle: VelloSceneBundle,
 }
 
 impl SplineControlPointBundle {
-    pub fn new(pos: Vec2) -> Self {
+    pub fn new(pos: Vec2, handle: Entity) -> Self {
         Self {
-            spatial: SpatialBundle::from_transform(Transform::from_xyz(pos.x, pos.y, 10.)),
-            ..default()
+            control_point: SplineControlPoint { handle },
+            scene_bundle: VelloSceneBundle {
+                transform: Transform::from_xyz(pos.x, pos.y, 5.),
+                ..default()
+            },
         }
     }
 }
@@ -64,19 +69,18 @@ pub struct SplineHandle {
 pub struct SplineHandleBundle {
     pub handle: SplineHandle,
     pub handle_control_mode: HandleControlMode,
-    pub spatial: SpatialBundle,
-    pub scene: VelloScene,
-    pub coordinate_space: CoordinateSpace,
+    pub scene: VelloSceneBundle,
 }
 
 impl SplineHandleBundle {
-    pub fn new(handle: SplineHandle) -> Self {
+    pub fn new(handle: SplineHandle, pos: Vec2) -> Self {
         Self {
             handle,
             handle_control_mode: HandleControlMode::default(),
-            spatial: SpatialBundle::from_transform(Transform::from_xyz(0., 0., 10.)),
-            scene: VelloScene::default(),
-            coordinate_space: CoordinateSpace::default(),
+            scene: VelloSceneBundle {
+                transform: Transform::from_xyz(pos.x, pos.y, 10.),
+                ..default()
+            },
         }
     }
 }
@@ -168,8 +172,9 @@ fn render_splines(
     }
 }
 
-fn render_handles(mut handles: Query<&mut VelloScene, With<SplineHandle>>) {
-    for mut scene in handles.iter_mut() {
+fn render_handles(mut handles: Query<(Option<&Selected>, &mut VelloScene), With<SplineHandle>>) {
+    for (selected, mut scene) in handles.iter_mut() {
+        let selected = selected.is_some();
         scene.reset();
 
         let circle = Circle::new(Point::ZERO, 4.0);
@@ -177,7 +182,11 @@ fn render_handles(mut handles: Query<&mut VelloScene, With<SplineHandle>>) {
         scene.fill(
             Fill::EvenOdd,
             Affine::IDENTITY,
-            peniko::Color::DARK_GRAY,
+            if selected {
+                peniko::Color::DARK_RED
+            } else {
+                peniko::Color::DARK_GRAY
+            },
             None,
             &circle,
         );
@@ -185,7 +194,11 @@ fn render_handles(mut handles: Query<&mut VelloScene, With<SplineHandle>>) {
         scene.stroke(
             &Stroke::new(1.0),
             Affine::IDENTITY,
-            peniko::Color::WHITE,
+            if selected {
+                peniko::Color::RED
+            } else {
+                peniko::Color::WHITE
+            },
             None,
             &circle,
         );
@@ -193,26 +206,48 @@ fn render_handles(mut handles: Query<&mut VelloScene, With<SplineHandle>>) {
 }
 
 fn render_control_points(
-    mut handles: Query<(&Transform, &mut VelloScene), With<SplineControlPoint>>,
+    mut control_points: Query<(
+        &SplineControlPoint,
+        &GlobalTransform,
+        Option<&Selected>,
+        &mut VelloScene,
+    )>,
+    handles: Query<&GlobalTransform, With<SplineHandle>>,
 ) {
-    for (transform, mut scene) in handles.iter_mut() {
+    for (control_point, transform, selected, mut scene) in control_points.iter_mut() {
+        let Ok(handle_transform) = handles.get(control_point.handle) else {
+            continue;
+        };
+
+        let selected = selected.is_some();
+
         scene.reset();
 
         scene.stroke(
-            &Stroke::new(0.1),
+            &Stroke::new(0.5),
             Affine::IDENTITY,
-            peniko::Color::DARK_GRAY,
+            if selected {
+                peniko::Color::RED
+            } else {
+                peniko::Color::WHITE
+            },
             None,
             &Line::new(
                 Point::ZERO,
-                SplinePoint::from(-transform.translation.truncate()),
+                SplinePoint::from(
+                    (-transform.translation() + handle_transform.translation()).truncate(),
+                ),
             ),
         );
 
         scene.fill(
             Fill::EvenOdd,
             Affine::IDENTITY,
-            peniko::Color::WHITE,
+            if selected {
+                peniko::Color::RED
+            } else {
+                peniko::Color::WHITE
+            },
             None,
             &Circle::new(Point::ZERO, 2.0),
         );
