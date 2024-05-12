@@ -1,9 +1,15 @@
+mod camera;
 mod editor;
 mod spline;
 
-use bevy::{math::vec2, prelude::*};
-use bevy_pancam::{PanCam, PanCamPlugin};
+use bevy::{
+    math::vec2,
+    prelude::*,
+    render::render_resource::{AsBindGroup, ShaderRef},
+};
+
 use bevy_vello::VelloPlugin;
+use camera::CameraPlugin;
 use editor::{EditorPlugin, Selected};
 use spline::{
     Spline, SplineBundle, SplineControlPointBundle, SplineHandle, SplineHandleBundle, SplinePlugin,
@@ -20,20 +26,13 @@ fn main() {
             }),
             ..default()
         }))
-        // .add_plugins(bevy_editor_pls::EditorPlugin::default())
-        .add_plugins(PanCamPlugin::default())
         .add_plugins(VelloPlugin)
-        .add_plugins((EditorPlugin, SplinePlugin))
+        .add_plugins((CameraPlugin, EditorPlugin, SplinePlugin))
         .add_systems(Startup, setup)
         .run();
 }
 
-#[derive(Component)]
-struct MainCamera;
-
 fn setup(mut commands: Commands) {
-    commands.spawn((MainCamera, Camera2dBundle::default(), PanCam::default()));
-
     let handle1 = commands.spawn_empty().id();
     let c1a = commands
         .spawn((
@@ -88,4 +87,13 @@ fn setup(mut commands: Commands) {
         },
         ..default()
     },));
+}
+
+#[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
+struct GridMaterial {}
+
+impl Material for GridMaterial {
+    fn fragment_shader() -> ShaderRef {
+        "shaders/grid.wgsl".into()
+    }
 }

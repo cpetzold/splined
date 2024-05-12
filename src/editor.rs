@@ -1,6 +1,4 @@
-use bevy::{input::InputSystem, prelude::*, transform::commands, window::PrimaryWindow};
-use bevy_editor_pls::egui::epaint::text::cursor;
-use bevy_rapier2d::rapier::crossbeam::channel::Select;
+use bevy::{input::InputSystem, prelude::*, window::PrimaryWindow};
 use leafwing_input_manager::{
     axislike::DualAxisData, plugin::InputManagerSystem, prelude::*, systems::run_if_enabled,
 };
