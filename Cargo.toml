@@ -8,10 +8,9 @@ edition = "2021"
 [dependencies]
 bevy = { version = "0.13", features = ["file_watcher"] }
 bevy_dylib = "0.13"
-bevy_editor_pls = "0.8"
 bevy_pancam = { version = "0.11.1", features = ["bevy_egui"] }
-bevy_rapier2d = "0.25"
-bevy_vello = "0.3"
+bevy_rapier2d = "0.26"
+bevy_vello = { path = "../bevy_vello" }
 leafwing-input-manager = "0.13"
 
 [profile.dev.package."*"]

@@ -2,11 +2,7 @@ mod camera;
 mod editor;
 mod spline;
 
-use bevy::{
-    math::vec2,
-    prelude::*,
-    render::render_resource::{AsBindGroup, ShaderRef},
-};
+use bevy::{math::vec2, prelude::*};
 
 use bevy_vello::VelloPlugin;
 use camera::CameraPlugin;
@@ -87,13 +83,4 @@ fn setup(mut commands: Commands) {
         },
         ..default()
     },));
-}
-
-#[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
-struct GridMaterial {}
-
-impl Material for GridMaterial {
-    fn fragment_shader() -> ShaderRef {
-        "shaders/grid.wgsl".into()
-    }
 }

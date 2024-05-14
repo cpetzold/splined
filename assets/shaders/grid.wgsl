@@ -7,8 +7,8 @@
 const minCellSize: f32 = 0.0001;
 const minCellPixelWidth: f32 = 2.0;
 const lineWidth: f32 = 2.0;
-const thinColor: vec3<f32> = vec3<f32>(1.0, 0.0, 0.0);
-const thickColor: vec3<f32> = vec3<f32>(0.0, 0.0, 1.0);
+const thinColor: vec3<f32> = vec3<f32>(0.04, 0.04, 0.04);
+const thickColor: vec3<f32> = vec3<f32>(0.2, 0.2, 0.2);
 
 fn max2(v: vec2<f32>) -> f32 {
     return max(v.x, v.y);
@@ -46,27 +46,21 @@ fn grid(uv: vec2<f32>) -> vec4<f32> {
         lod2a > 0.0
     );
     let alpha: f32 = select(
-        lod1a * (1.0 - fade),
         // select(lod1a * (1.0 - fade), lod1a, lod1a > 0.0),
+        lod1a * (1.0 - fade),
         lod2a,
         lod2a > 0.0
     );
-
-    // lod2a > 0.0 ? thickColor : lod1a > 0.0 ? mix(thickColor, thinColor, fade) : thinColor,
-    // lod2a > 0.0 ? lod2a : lod1a > 0.0 ? lod1a : lod1a * (1.0 - fade)
 
     return vec4<f32>(color, alpha);
 }
 
 @fragment
 fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
-    let resolution = view.viewport.zw;
-    var uv = (in.uv * 2.0) - 0.5;
-    uv.x *= resolution.x / resolution.y;
-    // let uv = (in.uv * 2.0 - resolution.xy) / resolution.y;
-    let scale: f32 = pow(10.0, 1.5 * sin(globals.time / 10.0));
+    // let ndc_pos = in.uv * 2.0 - 1.0;
+    let ndc_pos = vec2<f32>(in.uv.x * 2.0 - 1.0, 1.0 - in.uv.y * 2.0); // Invert Y here
 
+    let world_pos = (view.inverse_view_proj * vec4<f32>(ndc_pos.x, ndc_pos.y, 0.0, 1.0)).xy;
 
-
-    return grid(uv * scale);
+    return grid(world_pos);
 }
